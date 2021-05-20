@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>aspnet-PowerService-8799D55B-CD43-4146-BCDE-1B0E6ED6B039</UserSecretsId>
+    <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
+    <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+    <DockerfileContext>.</DockerfileContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\OrganizationsController.cs" />
+    <Compile Remove="Data\Migrations\20210510134451_Initial.cs" />
+    <Compile Remove="Data\Migrations\20210510134451_Initial.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210510163904_CloudInitial.cs" />
+    <Compile Remove="Data\Migrations\20210510163904_CloudInitial.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511102518_110521.cs" />
+    <Compile Remove="Data\Migrations\20210511102518_110521.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511103657_110521_2.cs" />
+    <Compile Remove="Data\Migrations\20210511103657_110521_2.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511103830_110521_3.cs" />
+    <Compile Remove="Data\Migrations\20210511103830_110521_3.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511104335_110521_5.cs" />
+    <Compile Remove="Data\Migrations\20210511104335_110521_5.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511104902_110521_6.cs" />
+    <Compile Remove="Data\Migrations\20210511104902_110521_6.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511105058_110521_7.cs" />
+    <Compile Remove="Data\Migrations\20210511105058_110521_7.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511105238_110521_8.cs" />
+    <Compile Remove="Data\Migrations\20210511105238_110521_8.Designer.cs" />
+    <Compile Remove="Data\Migrations\20210511105658_INITIAL2.cs" />
+    <Compile Remove="Data\Migrations\20210511105658_INITIAL2.Designer.cs" />
+    <Compile Remove="Data\Migrations\PowerServiceContextModelSnapshot.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.AzureAD.UI" Version="3.1.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="3.1.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="3.1.13" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.13">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.9" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.13" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
+    <PackageReference Include="Swashbuckle.Core" Version="5.6.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\Migrations\" />
+  </ItemGroup>
+
+</Project>
