@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 
 namespace PowerService.Data.Models
 {
-    public class Configuration: OrganizationModel
+    public class Configuration
     {
+        public Guid Id { get;set; }
         public List<ConfigurationItem> ConfigurationItems { get; set; }
     }
 }

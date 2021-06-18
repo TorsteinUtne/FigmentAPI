@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerService.Data;
@@ -21,7 +23,7 @@ namespace PowerService.DAL.Context
             _context = context;
         }
         // GET: api/Contact
-        //[Authorize]
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Contact>>> GetContacts()
         {
@@ -53,7 +55,8 @@ namespace PowerService.DAL.Context
             {
                 return BadRequest();
             }
-
+           // contact.OrganizationId = Util.HelpFunctions.GetOrganizationId();
+            contact.OwnerId = Util.HelpFunctions.GetCurrentUserId();
             _context.Entry(contact).State = EntityState.Modified;
 
             try
@@ -74,13 +77,17 @@ namespace PowerService.DAL.Context
 
             return NoContent();
         }
-
+        
         // POST: api/Contact
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(Contact))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<Contact>> PostContact(Contact contact)
         {
+           // contact.OrganizationId = Util.HelpFunctions.GetOrganizationId();
+            contact.OwnerId = Util.HelpFunctions.GetCurrentUserId();
             _context.Contacts.Add(contact);
             await _context.SaveChangesAsync();
 

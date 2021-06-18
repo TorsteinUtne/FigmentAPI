@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerService", "PowerService.csproj", "{594C15A2-7B98-4157-86A8-EC35E941A58F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PowerService", "PowerService.csproj", "{594C15A2-7B98-4157-86A8-EC35E941A58F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerService.Tests", "..\PowerService.Tests\PowerService.Tests.csproj", "{1A515014-C317-442D-84D7-FF18337985A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{594C15A2-7B98-4157-86A8-EC35E941A58F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{594C15A2-7B98-4157-86A8-EC35E941A58F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{594C15A2-7B98-4157-86A8-EC35E941A58F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A515014-C317-442D-84D7-FF18337985A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A515014-C317-442D-84D7-FF18337985A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A515014-C317-442D-84D7-FF18337985A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A515014-C317-442D-84D7-FF18337985A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

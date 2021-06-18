@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 
 namespace PowerService.Data.Models
 {
-    public class LicenseType : OrganizationModel
+    public class LicenseType 
     {
+        public Guid Id { get; set; }
         public string License { get; set; }
 
         public string Description { get; set; }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PowerService.Data;
 using PowerService.Data.Models;
+using PowerService.Data.Models.Audit;
 
 namespace PowerService.DAL.Context
 {
@@ -13,19 +14,16 @@ namespace PowerService.DAL.Context
     [ApiController]
     public class AuditController : ControllerBase
     {
-        private readonly PowerServiceContext _context;
+        private readonly AuditableIdentityContext _context;
 
-        public AuditController(PowerServiceContext context)
+        public AuditController(AuditableIdentityContext context)
         {
             _context = context;
         }
         // GET: api/Audit
         //[Authorize]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Audit>>> GetAudits()
-        {
-            return await _context.Audits.ToListAsync();
-        }
+        public async Task<ActionResult<IEnumerable<Audit>>> GetAudits() => await _context.Audits.ToListAsync();
 
         // GET: api/Audit/5
         //[Authorize]

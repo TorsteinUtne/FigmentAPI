@@ -21,7 +21,7 @@ namespace PowerService.DAL.Context
         {
             _context = context;
         }
-        // GET: api/Transaction
+        // GET: api/Inventory
         //[Authorize]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Transaction>>> GetTransactions()
@@ -29,7 +29,7 @@ namespace PowerService.DAL.Context
             return await _context.Transactions.ToListAsync();
         }
 
-        // GET: api/Transaction/5
+        // GET: api/Inventory/5
         //[Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Transaction>> GetTransaction(Guid id)
@@ -44,7 +44,7 @@ namespace PowerService.DAL.Context
             return transaction;
         }
 
-        // PUT: api/Transaction/5
+        // PUT: api/Inventory/5
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPut("{id}")]
@@ -76,7 +76,7 @@ namespace PowerService.DAL.Context
             return NoContent();
         }
 
-        // POST: api/Transaction
+        // POST: api/Inventory
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
         [HttpPost]
@@ -88,7 +88,7 @@ namespace PowerService.DAL.Context
             return CreatedAtAction("GetTransaction", new { id = transaction.Id }, transaction);
         }
 
-        // DELETE: api/Transaction/5
+        // DELETE: api/Inventory/5
         [HttpDelete("{id}")]
         public async Task<ActionResult<Transaction>> DeleteTransaction(Guid id)
         {
