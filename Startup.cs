@@ -250,5 +250,6 @@ namespace PowerService
                 .OfType<NewtonsoftJsonPatchInputFormatter>()
                 .First();
         }
+       
     }
     }

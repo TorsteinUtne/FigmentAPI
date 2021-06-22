@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using PowerService.Data;
+using PowerService.Data.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,36 +16,63 @@ namespace PowerService.Controllers.API
     [ApiController]
     public class SearchController : ControllerBase
     {
-        // GET: api/<SearchController>
-        [HttpGet]
-        public IEnumerable<string> Get()
+        private readonly PowerServiceContext _context;
+
+        public SearchController(PowerServiceContext context)
         {
-            return new string[] { "value1", "value2" };
+            _context = context;
         }
 
-        // GET api/<SearchController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
+        //[Authorize]
+        //[Microsoft.AspNetCore.Mvc.HttpGet]
+        //[ApiConventionMethod(typeof(DefaultApiConventions),
+        //             nameof(DefaultApiConventions.Get))]
+        //public async Task<ActionResult<IEnumerable<IRecord>>> Search([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
+        //{
+        //    var entityCollections = _context.Model.GetEntityTypes().OrderBy(x => x.Name).ToList();
 
-        // POST api/<SearchController>
-        [HttpPost]
-        public void Post([FromBody] string value)
-        {
-        }
+        //    var entities = new Dictionary<string, Func<DbContext, IQueryable>>()
+        //    //{
+        //    //    { "Accounts", ( DbContext context ) => context.Set<Account>() }
+        //    //};
+        //    foreach (var entityType in entityCollections)
+        //    {
+        //        entities.Add(entityType.Name, (_context => _context.Set<Account>()));
+        //    };
+        //    DbSet<Account> dbSet = c
 
-        // PUT api/<SearchController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
-        {
-        }
 
-        // DELETE api/<SearchController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
+       
+         
+        //    //Extract parameters
+        //    int pageNumber = searchParameters.PageNumber;
+        //    int pageSize = searchParameters.PageSize;
+          
+        //    string searchValue = searchParameters.SearchValue;
+        //    string sortingField = searchParameters.SortingField;
+        //    string order = searchParameters.Order;
+
+        //    try
+        //    {
+
+
+        //        var result = await _context.Accounts
+        //       .OrderBy(x => x.Name) //TODO: Change to queryParamenters.Sortingfield
+        //       .Skip((pageNumber - 1) * pageSize)
+        //       .Take(pageSize)
+        //       .ToListAsync();
+        //        return Ok(result);
+
+        //    }
+        //    catch (UnauthorizedAccessException)
+        //    {
+        //        return Unauthorized();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+
+        //}
     }
 }

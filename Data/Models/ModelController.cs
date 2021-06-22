@@ -5,8 +5,7 @@ using System.Threading.Tasks;
 
 namespace PowerService.Data.Models
 {
-    public class IRecord
+    public class ModelController
     {
-     
     }
 }
