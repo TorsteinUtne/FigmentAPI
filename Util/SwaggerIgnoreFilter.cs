@@ -1,12 +1,8 @@
 ﻿using Microsoft.OpenApi.Models;
 using Newtonsoft.Json;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using Swashbuckle.Swagger;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using ISchemaFilter = Swashbuckle.AspNetCore.SwaggerGen.ISchemaFilter;
 
 namespace PowerService.Util
@@ -17,7 +13,7 @@ namespace PowerService.Util
         {
             if (schema.Properties.Count == 0)
                 return;
-
+          
             const BindingFlags bindingFlags = BindingFlags.Public |
                                               BindingFlags.NonPublic |
                                               BindingFlags.Instance;

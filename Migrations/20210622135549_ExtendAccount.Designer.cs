@@ -10,8 +10,8 @@ using PowerService.Data;
 namespace PowerService.Migrations
 {
     [DbContext(typeof(PowerServiceContext))]
-    [Migration("20210611081412_current")]
-    partial class current
+    [Migration("20210622135549_ExtendAccount")]
+    partial class ExtendAccount
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -58,31 +58,37 @@ namespace PowerService.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("HomePage")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NACECode")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OrganizationNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid?>("OwnerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Accounts");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("c43f6a50-b605-43f6-a8dd-2367b6f12023"),
-                            AccountType = 0,
-                            Description = "Denne oppføringen kan brukes til å knytte aktiviteter, dokumenter, og saker mot kunder, samt spore historikk",
-                            Name = "Min første kunde",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Activity", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Content")
@@ -126,27 +132,18 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Activities");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("8d7ec929-6fae-484f-91a5-d1b6a5d3d667"),
-                            CreatedOn = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "This is a record that shows some sort of interaction between two parties",
-                            Direction = 0,
-                            FromPartyId = new Guid("00000000-0000-0000-0000-000000000000"),
-                            Name = "The subject of the activity",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a"),
-                            Status = 0,
-                            ToPartyId = new Guid("00000000-0000-0000-0000-000000000000")
-                        });
+                    b.ToTable("Activities");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Address", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("AddressType")
@@ -181,17 +178,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Addresses");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("fb33a4aa-067e-4d80-a30d-cf9cabc2e3b5"),
-                            AddressType = 0,
-                            Description = "",
-                            Name = "Address for",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
+                    b.ToTable("Addresses");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Attachment", b =>
@@ -266,17 +255,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Billings");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("ec734089-a981-460f-809c-3b534e52e8c3"),
-                            DueDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            FromDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            KID = 0.0,
-                            ToDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
+                    b.ToTable("Billings");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.BillingItem", b =>
@@ -342,17 +323,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Bookings");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("984313c9-137a-415b-b61a-096f27af01e5"),
-                            BookingStatus = 0,
-                            Description = "This field can be used to provide a more detailed description for the services offered",
-                            Name = "Booking for service",
-                            Quantity = 0
-                        });
+                    b.ToTable("Bookings");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Case", b =>
@@ -393,19 +366,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Cases");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("27507aa5-8f60-49db-98ac-f5da0768615d"),
-                            CreatedOn = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "This field can be used to provide a more detailed description of the request",
-                            ModifiedOn = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "Service request received",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a"),
-                            Status = 0
-                        });
+                    b.ToTable("Cases");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Configuration", b =>
@@ -470,17 +433,6 @@ namespace PowerService.Migrations
                     b.HasIndex("ContactId");
 
                     b.ToTable("Consents");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("aaeb9bb5-cdb4-49de-84a7-7b758a04a0a9"),
-                            ConsentType = 0,
-                            Description = "Hva innebærer samtykke",
-                            IsWithdrawn = false,
-                            Name = "Samtykke for person",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Contact", b =>
@@ -512,22 +464,18 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Contacts");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("48477d0d-affc-47e7-8b8c-4454754627bf"),
-                            FirstName = "Ola",
-                            LastName = " Nordmann",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
+                    b.ToTable("Contacts");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Document", b =>
                 {
                     b.Property<Guid?>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ContentAsBase64")
@@ -556,15 +504,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Documents");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("ed20ac49-ff3a-4dcf-afe3-ad22da806cbf"),
-                            DocumentCategoryType = 0,
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
+                    b.ToTable("Documents");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Inventory", b =>
@@ -633,16 +575,6 @@ namespace PowerService.Migrations
                     b.HasIndex("OwnerId");
 
                     b.ToTable("LicenseTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("602380a1-3750-4c98-8c2f-75eab7d9f19a"),
-                            Description = "This is a monthly subscription, paid for a full year",
-                            License = "MonthlySubscription",
-                            NumberOfUsers = 20,
-                            ValidTill = new DateTime(2022, 6, 11, 10, 14, 10, 907, DateTimeKind.Local).AddTicks(6388)
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Organization", b =>
@@ -657,6 +589,9 @@ namespace PowerService.Migrations
                     b.Property<string>("Domain")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid?>("OrganizationLicenseId")
                         .HasColumnType("uniqueidentifier");
 
@@ -666,13 +601,6 @@ namespace PowerService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Organizations");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("777a4315-7fd8-429d-9b9d-2f40fb67c13b"),
-                            OrganizationName = "Konfigurativ"
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.PortalUser", b =>
@@ -680,6 +608,9 @@ namespace PowerService.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AuthOId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("EmailAddress")
                         .HasColumnType("nvarchar(max)");
@@ -702,18 +633,6 @@ namespace PowerService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("PortalUsers");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a"),
-                            OrganizationId = new Guid("00000000-0000-0000-0000-000000000000")
-                        },
-                        new
-                        {
-                            Id = new Guid("31653098-a8f5-43ef-90d8-e96908c2d0b7"),
-                            OrganizationId = new Guid("00000000-0000-0000-0000-000000000000")
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Product", b =>
@@ -746,13 +665,6 @@ namespace PowerService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Products");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("dcd711d0-43f4-465e-acab-7a34f6b200bf"),
-                            Stock = 0
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.ProductType", b =>
@@ -770,12 +682,22 @@ namespace PowerService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ProductTypes");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("7d5edb9b-3a0f-43e6-846b-dd643f20a9c9")
-                        });
+            modelBuilder.Entity("PowerService.Data.Models.Purchase", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AccountId");
+
+                    b.ToTable("Purchase");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.RelatedItem", b =>
@@ -811,6 +733,9 @@ namespace PowerService.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
@@ -831,17 +756,9 @@ namespace PowerService.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Subscriptions");
+                    b.HasIndex("AccountId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("a1c3c58c-1921-4beb-a44c-5af73f6df536"),
-                            Description = "Avtalen som regulerer vedlikeholdet av levert løsning ",
-                            FromDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "Forvaltnigsavtale",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a")
-                        });
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.Transaction", b =>
@@ -883,20 +800,6 @@ namespace PowerService.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Transactions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("1848c65b-c879-4226-8746-9acc6e12e03a"),
-                            Amount = 0f,
-                            Date = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Description for this transaction",
-                            FromAccount = new Guid("00000000-0000-0000-0000-000000000000"),
-                            Name = "Heading for transaction",
-                            OwnerId = new Guid("79dc839f-31ac-4641-a86c-50e44e12af0a"),
-                            ToAccount = new Guid("00000000-0000-0000-0000-000000000000"),
-                            TransactionDate = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified)
-                        });
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.AccessRights", b =>
@@ -906,6 +809,20 @@ namespace PowerService.Migrations
                         .HasForeignKey("PortalUserId");
                 });
 
+            modelBuilder.Entity("PowerService.Data.Models.Activity", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Activities")
+                        .HasForeignKey("AccountId");
+                });
+
+            modelBuilder.Entity("PowerService.Data.Models.Address", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Addresses")
+                        .HasForeignKey("AccountId");
+                });
+
             modelBuilder.Entity("PowerService.Data.Models.Attachment", b =>
                 {
                     b.HasOne("PowerService.Data.Models.Activity", null)
@@ -913,11 +830,32 @@ namespace PowerService.Migrations
                         .HasForeignKey("ActivityId");
                 });
 
+            modelBuilder.Entity("PowerService.Data.Models.Billing", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Billings")
+                        .HasForeignKey("AccountId");
+                });
+
             modelBuilder.Entity("PowerService.Data.Models.BillingItem", b =>
                 {
                     b.HasOne("PowerService.Data.Models.Billing", null)
                         .WithMany("Items")
                         .HasForeignKey("BillingId");
+                });
+
+            modelBuilder.Entity("PowerService.Data.Models.Booking", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Bookings")
+                        .HasForeignKey("AccountId");
+                });
+
+            modelBuilder.Entity("PowerService.Data.Models.Case", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Cases")
+                        .HasForeignKey("AccountId");
                 });
 
             modelBuilder.Entity("PowerService.Data.Models.ConfigurationItem", b =>
@@ -934,6 +872,20 @@ namespace PowerService.Migrations
                         .HasForeignKey("ContactId");
                 });
 
+            modelBuilder.Entity("PowerService.Data.Models.Contact", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Contacts")
+                        .HasForeignKey("AccountId");
+                });
+
+            modelBuilder.Entity("PowerService.Data.Models.Document", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Document")
+                        .HasForeignKey("AccountId");
+                });
+
             modelBuilder.Entity("PowerService.Data.Models.LicenseType", b =>
                 {
                     b.HasOne("PowerService.Data.Models.Billing", "LicenseTypeBilling")
@@ -945,6 +897,13 @@ namespace PowerService.Migrations
                         .HasForeignKey("OwnerId");
                 });
 
+            modelBuilder.Entity("PowerService.Data.Models.Purchase", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Purchases")
+                        .HasForeignKey("AccountId");
+                });
+
             modelBuilder.Entity("PowerService.Data.Models.RelatedItem", b =>
                 {
                     b.HasOne("PowerService.Data.Models.Case", null)
@@ -954,6 +913,13 @@ namespace PowerService.Migrations
                     b.HasOne("PowerService.Data.Models.Subscription", null)
                         .WithMany("Billings")
                         .HasForeignKey("SubscriptionId");
+                });
+
+            modelBuilder.Entity("PowerService.Data.Models.Subscription", b =>
+                {
+                    b.HasOne("PowerService.Data.Models.Account", null)
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("AccountId");
                 });
 #pragma warning restore 612, 618
         }

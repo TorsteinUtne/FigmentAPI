@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using PowerService.Data.Models;
+
 namespace PowerService.Util
 {
     public class HelpFunctions
@@ -47,6 +49,36 @@ namespace PowerService.Util
                 var typedValue = Convert.ChangeType(value, prop.PropertyType);
                 prop.SetValue(model, typedValue);
             }
+        }
+
+        internal static bool CheckIfValueIsEnum(object value, string path)
+        {
+            object enumValue;
+            bool result = false;
+            switch (path.ToLower())
+            {
+                case "accounttype":
+                     result = Enum.TryParse(typeof(AccountTypes),  value.ToString(), false, out enumValue);
+                    break;
+                default:
+                    result = Enum.TryParse(typeof(AccountTypes), value.ToString(), false, out enumValue);
+                    break;
+            }
+            return result;
+        }
+
+        internal static string GetAllValuesFromEnumAsString(string path)
+        {
+            string values = "";
+            switch (path.ToLower())
+            {
+                case "accounttype":
+                    var enumValues = Enum.GetValues(typeof(AccountTypes)).Cast<AccountTypes>();
+                    foreach (var enumValue in enumValues)
+                    { values += enumValue.ToString()+ " | ";}
+                    break;
+            }
+            return values.Remove(values.Length - 3);
         }
     }
 }

@@ -15,6 +15,8 @@ using FromBodyAttribute = System.Web.Http.FromBodyAttribute;
 using HttpDeleteAttribute = Microsoft.AspNetCore.Mvc.HttpDeleteAttribute;
 using HttpPostAttribute = Microsoft.AspNetCore.Mvc.HttpPostAttribute;
 using System.Linq.Dynamic.Core;
+using Swashbuckle.Swagger.Annotations;
+using PowerService.Data.Models.RequestResponseObjects;
 
 namespace PowerService.DAL.Context
 {
@@ -35,13 +37,22 @@ namespace PowerService.DAL.Context
         {
             _context = context;
         }
-
-        //Er ikke dette egentlig GET - søk er vel default?
+        //TODO : Implement request -response class instead of custom types, using path only
+        // See https://mattfrear.com/2020/04/21/request-and-response-examples-in-swashbuckle-aspnetcore/
+        //En request-klasse for å spørre om data
+        //en responsklasse for å levere resultatet, skreddersydd til request
+        //underliggende modell som er knyttet til databasen
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="searchParameters"></param>
+        /// <returns></returns>
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpGet]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                     nameof(DefaultApiConventions.Get))]
-        public async Task<ActionResult<IEnumerable<AccountModel>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
+       //TODO: FIltrer på Owner-feltet
+        public async Task<ActionResult<IEnumerable<AccountResponse>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
         {
             string orderClause = "";
             if (searchParameters.SortingField == string.Empty)
@@ -61,7 +72,7 @@ namespace PowerService.DAL.Context
                 if (string.IsNullOrEmpty(searchParameters.SearchField))
                 {
                     string searchText = "";
-                    var columns = MappingFunctions.GetDisplayableColumns<Account>();
+                    var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
                     int i = 0;
                     foreach (var column in columns )
                     {
@@ -71,23 +82,24 @@ namespace PowerService.DAL.Context
                             searchText += " || ";
                     }
                     if(orderClause != string.Empty)
-                        accounts = await _context.Accounts.Where(searchText).OrderBy(orderClause).ToListAsync();
+                        accounts = await _context.Accounts.Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause).ToListAsync();
                    else
-                        accounts = await _context.Accounts.Where(searchText).ToListAsync();
+                        accounts = await _context.Accounts.Where(searchText, StringComparison.InvariantCultureIgnoreCase).ToListAsync();
                 }
                 else
                 {
                     if (orderClause != string.Empty)
-                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue).OrderBy(orderClause).ToListAsync();
+                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause).ToListAsync();
                     else
-                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue).ToListAsync();
+                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue, StringComparison.InvariantCultureIgnoreCase).ToListAsync();
                 }
 
                 //Convert list to AccountModel
-                var results = new List<AccountModel>();
+                var results = new List<AccountResponse>();
                 foreach(var account in accounts)
                 {
-                    results.Add(new AccountModel(account, _context));
+                    var response = await new AccountResponse().GetResponse(account.Id, _context);
+                    results.Add(response.Value);
                 }
                 return Ok(results);
             }
@@ -106,18 +118,18 @@ namespace PowerService.DAL.Context
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Get))]
      
-        public async Task<ActionResult<AccountModel>> GetAccount(Guid id)
+        public async Task<ActionResult<AccountResponse>> GetAccount(Guid id)
         {
             try
             {
-                var accountEntity = await _context.Accounts.FindAsync(id);
+                var response = await new AccountResponse().GetResponse(id, _context);
 
-                if (accountEntity == null)
+                if (response == null)
                 {
                     return NotFound();
                 }
 
-                return Ok(new AccountModel(accountEntity, _context));
+                return Ok(response.Value);
             }
             catch (Exception ex)
             {
@@ -127,22 +139,32 @@ namespace PowerService.DAL.Context
         //PATCHE eier - evt egen assign - funksjon
         //TODO: SJekk for endring i eier
         //Forsøk på endring av readonly - attributter må resultere i feilmelding - sånn at det ikke er mulig å patche id eller createdat, osv
+        //TODO: Patch og Post av accounttype må valideres
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpPatch("{id}")]
-       public async Task<IActionResult> PatchAccount([FromUri]Guid id, [FromBody]JsonPatchDocument<AccountModel>  patch)
+       public async Task<IActionResult> PatchAccount([FromUri]Guid id, [FromBody]JsonPatchDocument<AccountRequest>  patch)
         {
             var account = await _context.Accounts.FindAsync(id);
-            var accountModel = new AccountModel(account, _context);
-            patch.Sanitize<AccountModel>();
-            patch.ApplyTo(accountModel, ModelState);
-            var updatedAccount = new Account(accountModel, account.OwnerId.Value); //Copies to an account object to merge new values
-            //    _context.Accounts.Update(updatedAccount);
-            //Merge the changes into the currentAccount
+            if (account == null)
+                return NotFound();
+            var accountRequest = await new AccountRequest().GetRequest(account.Id, _context); //Henter frem en komplett request slik at hele objektet kan returnerens
+            string logMessage = "";
+            try
+            {
+                patch.Sanitize<AccountRequest>(out logMessage);
+            }
+            catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            patch.ApplyTo(accountRequest.Value, ModelState);
+            var updatedAccount = new Account(accountRequest.Value, account.OwnerId.Value); //Kopierer inn nye verdier
+            //Merger dem over på eksisterende account
             MappingFunctions.CopyValues<Account>(account, updatedAccount);
             _context.Entry(account).State = EntityState.Modified;
           
             await _context.SaveChangesAsync();
-            return Ok(accountModel);
+            return Ok(accountRequest.Value);
         }
 
        
@@ -154,7 +176,7 @@ namespace PowerService.DAL.Context
         [HttpPost]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Post))]
-        public async Task<ActionResult<AccountModel>> PostAccount([FromBody]AccountModel accountModel)
+        public async Task<ActionResult<AccountResponse>> PostAccount([FromBody] AccountRequest accountRequest)
         {
             try
             {
@@ -164,12 +186,12 @@ namespace PowerService.DAL.Context
 
                //
                var owner = await _context.PortalUsers.FirstOrDefaultAsync(i => i.AuthOId == userId);
-                var account = new Account(accountModel, owner.Id);
+                var account = new Account(accountRequest, owner.Id);
 
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction("POST", new { id = account.Id }, new AccountModel(account, _context)); 
+                return CreatedAtAction("POST", new { id = account.Id }, new AccountResponse().GetResponse(account.Id, _context).Result.Value); 
             }
             catch (Exception ex)
             {
@@ -192,7 +214,7 @@ namespace PowerService.DAL.Context
                 }
                 _context.Accounts.Remove(account);
                 await _context.SaveChangesAsync();
-                return Ok(new AccountModel(account, _context));
+                return Ok(String.Format("Record with Id {0} was deleted", id.ToString()));
             }
             catch (Exception ex) { return BadRequest(ex.Message); }
         }
