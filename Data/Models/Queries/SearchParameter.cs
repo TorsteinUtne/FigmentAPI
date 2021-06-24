@@ -7,19 +7,16 @@ namespace PowerService.Data.Models.Queries
 {
     public class SearchParameter
     {
-        const int maxPageSize = 250; //TODO: COnfig value
         public int PageNumber { get; set; } = 1;
-        private int _pageSize = 10;
-        public int PageSize
+        private Int32? _pageSize = null;
+        public Int32 PageSize
         {
             get
             {
-                return _pageSize;
+                _pageSize ??= Startup.MaxPageSize;
+                return _pageSize.Value;
             }
-            set
-            {
-                _pageSize = (value > maxPageSize) ? maxPageSize : value;
-            }
+            set => _pageSize = (value > Startup.MaxPageSize) ? Startup.MaxPageSize : value;
         }
 
         public string SortingField { get; set; } = "";

@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using PowerService.Data.Models;
+using PowerService.Data.Models.Queries;
 
 namespace PowerService.Util
 {
@@ -79,6 +81,72 @@ namespace PowerService.Util
                     break;
             }
             return values.Remove(values.Length - 3);
+        }
+
+        internal static string ExtractQueryInfoForLogger(SearchParameter searchParameters)
+        {
+            var str = "";
+            str += " | Search field: " + searchParameters.SearchField + " | " + "Search value: " +
+                   searchParameters.SearchValue + " | " + "Page Number: " + searchParameters.PageNumber + " | " +
+                   "Page Size: " + searchParameters.PageSize + " | " + "Order: " + searchParameters.Order + " | " +
+                   "Sorting field: " + searchParameters.SortingField + " at " + DateTime.Now.ToString();
+
+            return str;
+        }
+
+        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, int eventId, string path)
+        {
+            CreateLogEntry(logLevel, logger, null, eventId, path);
+        }
+
+        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, Exception ex, int eventId, string path)
+        {
+            if (!Startup.LoggingEnabled)
+                return;
+            EventId eId;
+            string message = "PATH " + path + " at " + DateTime.Now;
+
+            switch (eventId)
+            {
+                case 10001:
+                    eId= new EventId(10001, "Record(s) retrieved");
+                    break;
+                case 30001:
+                    eId = new EventId(10001, "Record(s) retrieved");
+                    break;
+                case 59001:
+                    eId = new EventId(10001, "Record(s) retrieved");
+                    break;
+                default:
+                    eId = new EventId(0, "No EventId given");
+                    break;
+            }
+
+            switch (logLevel)
+            {
+                case LogLevel.Information:
+                    logger.LogInformation(eId, ex, message );
+                    break;
+                case LogLevel.Warning:
+                    logger.LogWarning(eId, ex, message);
+                    break;
+                case LogLevel.Error:
+                    logger.LogError(eId, ex, message);
+                    break;
+                case LogLevel.Critical:
+                    logger.LogCritical(eId, ex, message);
+                    break;
+                case LogLevel.Trace:
+                    logger.LogTrace(eId, ex, message);
+                    break;
+                case LogLevel.Debug:
+                    logger.LogTrace(eId, ex, message);
+                    break;
+                default:
+                    logger.LogTrace(eId, ex, message);
+                    break;
+            }
+            ;
         }
     }
 }

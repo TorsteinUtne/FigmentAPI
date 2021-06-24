@@ -17,12 +17,15 @@ using HttpPostAttribute = Microsoft.AspNetCore.Mvc.HttpPostAttribute;
 using System.Linq.Dynamic.Core;
 using Swashbuckle.Swagger.Annotations;
 using PowerService.Data.Models.RequestResponseObjects;
+using PowerService.Data.Models.RequestResponseObjects.Wrappers;
+using PowerService.Services;
+using Microsoft.Extensions.Logging;
 
 namespace PowerService.DAL.Context
 {
     //TODO: Kontroller for alle synlige felt på Accountmodel - til bruk i grensesnittet  legg det inn som en egen modelcontroller
-    //TODO:  sjekke delete, legge til søk
-    //Legge til tilleggsattrributer
+    //TODO: Implememntere logging
+    //Legge til tilleggsattrributer - avgjøre hva som trengs. Evaluere hvor lang tid det tar å legge til ekstra felt av ulik type - int/string/dato bør gå kjapt
     //implementere audit
     //opprettet, endret, sporing, logging
     //Sjekke om autentiseringen faktisk fungerer
@@ -32,11 +35,15 @@ namespace PowerService.DAL.Context
     public class AccountController : ControllerBase
     {
         private readonly PowerServiceContext _context;
-        
-        public AccountController(PowerServiceContext context)
+        private readonly IUriService _uriService;
+        private readonly ILogger _logger;
+        public AccountController(PowerServiceContext context, IUriService uriService, ILogger<AccountController> logger)
         {
             _context = context;
+            _uriService = uriService;
+            _logger = logger;
         }
+        //TODO: Paginering er ikke lagt til, ser det ut som. Lag egen hjelpemetode, bruk verdier fra Config
         //TODO : Implement request -response class instead of custom types, using path only
         // See https://mattfrear.com/2020/04/21/request-and-response-examples-in-swashbuckle-aspnetcore/
         //En request-klasse for å spørre om data
@@ -45,35 +52,32 @@ namespace PowerService.DAL.Context
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="searchParameters"></param>
+        /// <param name="searchParameters">Objekt som inneholder søkefelt, søkeverdi, paginering, maks antall records, sorteringsfelt, samt sorteringsrekkefølge </param>
         /// <returns></returns>
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpGet]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                     nameof(DefaultApiConventions.Get))]
        //TODO: FIltrer på Owner-feltet
-        public async Task<ActionResult<IEnumerable<AccountResponse>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
+        public async Task<ActionResult<IEnumerable<Response<List<AccountResponse>>>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
         {
-            string orderClause = "";
+            var route = Request.Path.Value;
+            var orderClause = "";
             if (searchParameters.SortingField == string.Empty)
                 searchParameters.SortingField = "Name";
             if (searchParameters.Order.ToLower() == "desc")
-                {
-                    orderClause = searchParameters.SortingField + " DESC";
-                }
-                else
-                {
-                    orderClause = searchParameters.SortingField + " ASC";
-                }
-         
+                orderClause = searchParameters.SortingField + " DESC";
+            else
+                orderClause = searchParameters.SortingField + " ASC";
+
             try
             {
-                var accounts = new List<Account>();
+                List<Account> accounts;
                 if (string.IsNullOrEmpty(searchParameters.SearchField))
                 {
-                    string searchText = "";
+                    var searchText = "";
                     var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
-                    int i = 0;
+                    var i = 0;
                     foreach (var column in columns )
                     {
                         searchText += column + ".Contains(\"" + searchParameters.SearchValue + "\")";
@@ -81,37 +85,62 @@ namespace PowerService.DAL.Context
                         if( columns.Count > i)
                             searchText += " || ";
                     }
-                    if(orderClause != string.Empty)
-                        accounts = await _context.Accounts.Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause).ToListAsync();
-                   else
-                        accounts = await _context.Accounts.Where(searchText, StringComparison.InvariantCultureIgnoreCase).ToListAsync();
+
+                    if (orderClause != string.Empty)
+                        accounts = await _context.Accounts
+                            .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
+                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                            .Take(searchParameters.PageSize).ToListAsync();
+                    else
+                        accounts = await _context.Accounts
+                            .Where(searchText, StringComparison.InvariantCultureIgnoreCase)
+                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                            .Take(searchParameters.PageSize).ToListAsync();
                 }
                 else
                 {
                     if (orderClause != string.Empty)
-                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause).ToListAsync();
+                        accounts = await _context.Accounts
+                            .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
+                                StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
+                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                            .Take(searchParameters.PageSize).ToListAsync();
                     else
-                        accounts = await _context.Accounts.Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue, StringComparison.InvariantCultureIgnoreCase).ToListAsync();
+                        accounts = await _context.Accounts
+                            .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
+                                StringComparison.InvariantCultureIgnoreCase)
+                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                            .Take(searchParameters.PageSize).ToListAsync();
                 }
-
-                //Convert list to AccountModel
+                //TEst - trenger jeg orderclauise - kan dette reduseres til en? Hva hvis orderby er lik string.empty?
                 var results = new List<AccountResponse>();
                 foreach(var account in accounts)
                 {
                     var response = await new AccountResponse().GetResponse(account.Id, _context);
                     results.Add(response.Value);
                 }
-                return Ok(results);
+                var totalRecords = await _context.Accounts.CountAsync();
+                var pagedResponse = PaginationHelper.CreatePagedReponse<AccountResponse>(results, new PaginationFilter(searchParameters.PageNumber, searchParameters.PageSize), totalRecords, _uriService, route);
+                
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, 10001, Request.Path.Value);
+                return Ok(pagedResponse);
             }
-            catch (UnauthorizedAccessException)
+            catch (UnauthorizedAccessException uae)
             {
+                HelpFunctions.CreateLogEntry(LogLevel.Warning, _logger, uae, 30001, Request.Path.Value);
                 return Unauthorized();
             }
             catch (Exception ex)
             {
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, ex, 59001, Request.Path.Value);
                 return BadRequest(ex.Message);
             }
         }
+        /// <summary>
+        /// Retrieves a single account
+        /// </summary>
+        /// <param name="id">GUID for the account</param>
+        /// <returns></returns>
         // GET: api/Account/5
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpGet("{id}")]
@@ -140,6 +169,12 @@ namespace PowerService.DAL.Context
         //TODO: SJekk for endring i eier
         //Forsøk på endring av readonly - attributter må resultere i feilmelding - sånn at det ikke er mulig å patche id eller createdat, osv
         //TODO: Patch og Post av accounttype må valideres
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id">Guid to the account that is to be patched</param>
+        /// <param name="patch">JSON Patch document</param>
+        /// <returns></returns>
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpPatch("{id}")]
        public async Task<IActionResult> PatchAccount([FromUri]Guid id, [FromBody]JsonPatchDocument<AccountRequest>  patch)
@@ -148,10 +183,9 @@ namespace PowerService.DAL.Context
             if (account == null)
                 return NotFound();
             var accountRequest = await new AccountRequest().GetRequest(account.Id, _context); //Henter frem en komplett request slik at hele objektet kan returnerens
-            string logMessage = "";
             try
             {
-                patch.Sanitize<AccountRequest>(out logMessage);
+                patch.Sanitize();
             }
             catch(Exception ex)
             {
@@ -168,7 +202,11 @@ namespace PowerService.DAL.Context
         }
 
        
-
+        /// <summary>
+        /// Creates a new account
+        /// </summary>
+        /// <param name="accountRequest">Request-object of type AccountRequest to create a new account</param>
+        /// <returns></returns>
         // POST: api/Account
         // To protect from overposting attacks, enable the specific properties you want to bind to, for
         // more details, see https://go.microsoft.com/fwlink/?linkid=2123754.
@@ -180,12 +218,9 @@ namespace PowerService.DAL.Context
         {
             try
             {
-               
-                //Set defaults
-                string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-
-               //
-               var owner = await _context.PortalUsers.FirstOrDefaultAsync(i => i.AuthOId == userId);
+                Claim first = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+                string userId = first.Value;
+                var owner = await _context.PortalUsers.FirstOrDefaultAsync(i => i.AuthOId == userId);
                 var account = new Account(accountRequest, owner.Id);
 
                 _context.Accounts.Add(account);
@@ -198,7 +233,11 @@ namespace PowerService.DAL.Context
                 return BadRequest(ex.Message);
             }
         }
-
+        /// <summary>
+        /// Deletes a single account
+        /// </summary>
+        /// <param name="id">Guid to the account that is to be deleted</param>
+        /// <returns></returns>
         [Authorize]
         // DELETE: api/Account/5
         [HttpDelete("{id}")]
@@ -218,17 +257,6 @@ namespace PowerService.DAL.Context
             }
             catch (Exception ex) { return BadRequest(ex.Message); }
         }
-
-        private bool AccountExists(Guid id)
-        {
-            try
-            {
-                return _context.Accounts.Any(e => e.Id == id);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-        }
+       
     }
 }

@@ -77,9 +77,9 @@ namespace PowerService.Util
             return new List<Activity>();
         }
 
-        public static void Sanitize<T>(this Microsoft.AspNetCore.JsonPatch.JsonPatchDocument<T> document, out string logMessage) where T : class
+        public static void Sanitize<T>(this Microsoft.AspNetCore.JsonPatch.JsonPatchDocument<T> document) where T : class
         {
-            logMessage = "";
+
             try
             {
                 for (int i = document.Operations.Count - 1; i >= 0; i--)
@@ -89,10 +89,14 @@ namespace PowerService.Util
                     if (typeof(T).GetProperties().Where(p => p.IsDefined(typeof(DoNotPatchAttribute), true) && string.Equals(p.Name, pathPropertyName, StringComparison.CurrentCultureIgnoreCase)).Any())
                     {
                         // remove
-                        document.Operations.RemoveAt(i);
-
-                        //Message user that ID wasn't changed
-                        throw new Exception("Id's cannot be patched. Patch was not performed");
+                        if((document.Operations[i].op.ToLower() =="copy")|| (document.Operations[i].op.ToLower() == "test")) //Allow for copy and test
+                         { continue; }
+                        else
+                        {
+                            document.Operations.RemoveAt(i); //Remove
+                            //Message user that ID wasn't changed
+                            throw new Exception("Id's cannot be added, removed, copyed or replaced. Patch was not performed");
+                         }
                     }
                     if (typeof(T).GetProperties().Where(p => p.IsDefined(typeof(EnumAttribute), true) && string.Equals(p.Name, pathPropertyName, StringComparison.CurrentCultureIgnoreCase)).Any())
                     {
