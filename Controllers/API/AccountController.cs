@@ -20,11 +20,12 @@ using PowerService.Data.Models.RequestResponseObjects;
 using PowerService.Data.Models.RequestResponseObjects.Wrappers;
 using PowerService.Services;
 using Microsoft.Extensions.Logging;
+using PowerService.Data.Models.Queries;
 
 namespace PowerService.DAL.Context
 {
     //TODO: Kontroller for alle synlige felt på Accountmodel - til bruk i grensesnittet  legg det inn som en egen modelcontroller
-    //TODO: Implememntere logging
+
     //Legge til tilleggsattrributer - avgjøre hva som trengs. Evaluere hvor lang tid det tar å legge til ekstra felt av ulik type - int/string/dato bør gå kjapt
     //implementere audit
     //opprettet, endret, sporing, logging
@@ -61,66 +62,18 @@ namespace PowerService.DAL.Context
        //TODO: FIltrer på Owner-feltet
         public async Task<ActionResult<IEnumerable<Response<List<AccountResponse>>>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
         {
+            //TODO: Refactor, build service repository for methods accessing all entity types
             var route = Request.Path.Value;
-            var orderClause = "";
-            if (searchParameters.SortingField == string.Empty)
-                searchParameters.SortingField = "Name";
-            if (searchParameters.Order.ToLower() == "desc")
-                orderClause = searchParameters.SortingField + " DESC";
-            else
-                orderClause = searchParameters.SortingField + " ASC";
+            var orderClause = SanitizeSearchParams(searchParameters);
 
             try
             {
                 List<Account> accounts;
-                if (string.IsNullOrEmpty(searchParameters.SearchField))
-                {
-                    var searchText = "";
-                    var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
-                    var i = 0;
-                    foreach (var column in columns )
-                    {
-                        searchText += column + ".Contains(\"" + searchParameters.SearchValue + "\")";
-                        i++;
-                        if( columns.Count > i)
-                            searchText += " || ";
-                    }
-
-                    if (orderClause != string.Empty)
-                        accounts = await _context.Accounts
-                            .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
-                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                            .Take(searchParameters.PageSize).ToListAsync();
-                    else
-                        accounts = await _context.Accounts
-                            .Where(searchText, StringComparison.InvariantCultureIgnoreCase)
-                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                            .Take(searchParameters.PageSize).ToListAsync();
-                }
-                else
-                {
-                    if (orderClause != string.Empty)
-                        accounts = await _context.Accounts
-                            .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
-                                StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
-                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                            .Take(searchParameters.PageSize).ToListAsync();
-                    else
-                        accounts = await _context.Accounts
-                            .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
-                                StringComparison.InvariantCultureIgnoreCase)
-                            .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                            .Take(searchParameters.PageSize).ToListAsync();
-                }
+                accounts = await BuildAndExecuteQuery(searchParameters, orderClause);
                 //TEst - trenger jeg orderclauise - kan dette reduseres til en? Hva hvis orderby er lik string.empty?
-                var results = new List<AccountResponse>();
-                foreach(var account in accounts)
-                {
-                    var response = await new AccountResponse().GetResponse(account.Id, _context);
-                    results.Add(response.Value);
-                }
+                var results = await BuildResponseObjects(accounts);
                 var totalRecords = await _context.Accounts.CountAsync();
-                var pagedResponse = PaginationHelper.CreatePagedReponse<AccountResponse>(results, new PaginationFilter(searchParameters.PageNumber, searchParameters.PageSize), totalRecords, _uriService, route);
+                var pagedResponse = CreatePagedResponses(searchParameters, results, totalRecords, route);
                 
                 HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, 10001, Request.Path.Value);
                 return Ok(pagedResponse);
@@ -136,6 +89,85 @@ namespace PowerService.DAL.Context
                 return BadRequest(ex.Message);
             }
         }
+
+        private PagedResponse<List<AccountResponse>> CreatePagedResponses(SearchParameter searchParameters, List<AccountResponse> results, int totalRecords,
+            string route)
+        {
+            var pagedResponse = PaginationHelper.CreatePagedReponse<AccountResponse>(results,
+                new PaginationFilter(searchParameters.PageNumber, searchParameters.PageSize), totalRecords, _uriService, route);
+            return pagedResponse;
+        }
+
+        private async Task<List<AccountResponse>> BuildResponseObjects(List<Account> accounts)
+        {
+            var results = new List<AccountResponse>();
+            foreach (var account in accounts)
+            {
+                var response = await new AccountResponse().GetResponse(account.Id, _context);
+                results.Add(response.Value);
+            }
+
+            return results;
+        }
+
+        private async Task<List<Account>> BuildAndExecuteQuery(SearchParameter searchParameters, string orderClause)
+        {
+            List<Account> accounts;
+            if (string.IsNullOrEmpty(searchParameters.SearchField))
+            {
+                var searchText = "";
+                var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
+                var i = 0;
+                foreach (var column in columns)
+                {
+                    searchText += column + ".Contains(\"" + searchParameters.SearchValue + "\")";
+                    i++;
+                    if (columns.Count > i)
+                        searchText += " || ";
+                }
+
+                if (orderClause != string.Empty)
+                    accounts = await _context.Accounts
+                        .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
+                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                        .Take(searchParameters.PageSize).ToListAsync();
+                else
+                    accounts = await _context.Accounts
+                        .Where(searchText, StringComparison.InvariantCultureIgnoreCase)
+                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                        .Take(searchParameters.PageSize).ToListAsync();
+            }
+            else
+            {
+                if (orderClause != string.Empty)
+                    accounts = await _context.Accounts
+                        .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
+                            StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
+                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                        .Take(searchParameters.PageSize).ToListAsync();
+                else
+                    accounts = await _context.Accounts
+                        .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
+                            StringComparison.InvariantCultureIgnoreCase)
+                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                        .Take(searchParameters.PageSize).ToListAsync();
+            }
+
+            return accounts;
+        }
+
+        private static string SanitizeSearchParams(SearchParameter searchParameters)
+        {
+            var orderClause = "";
+            if (searchParameters.SortingField == string.Empty)
+                searchParameters.SortingField = "Name";
+            if (searchParameters.Order.ToLower() == "desc")
+                orderClause = searchParameters.SortingField + " DESC";
+            else
+                orderClause = searchParameters.SortingField + " ASC";
+            return orderClause;
+        }
+
         /// <summary>
         /// Retrieves a single account
         /// </summary>
