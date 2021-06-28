@@ -30,6 +30,8 @@ namespace PowerService.DAL.Context
     //implementere audit
     //opprettet, endret, sporing, logging
     //Sjekke om autentiseringen faktisk fungerer
+
+    //TODO: Feil når maks antall records er lavere enn pagesizxe
     [Microsoft.AspNetCore.Mvc.Route("api/[controller]")]
   
     [ApiController]
@@ -44,14 +46,9 @@ namespace PowerService.DAL.Context
             _uriService = uriService;
             _logger = logger;
         }
-        //TODO: Paginering er ikke lagt til, ser det ut som. Lag egen hjelpemetode, bruk verdier fra Config
-        //TODO : Implement request -response class instead of custom types, using path only
-        // See https://mattfrear.com/2020/04/21/request-and-response-examples-in-swashbuckle-aspnetcore/
-        //En request-klasse for å spørre om data
-        //en responsklasse for å levere resultatet, skreddersydd til request
-        //underliggende modell som er knyttet til databasen
+ 
         /// <summary>
-        /// 
+        /// Get accounst henter ut registrerte accounts, basert på et eller flere søkeparametre. Maks antall oppføringer per side er 250 (kan endres i config). For å søke på flere søkefelt samtidig, bruk semikolon for å skille søkefelt. Feilstavede søkefelt og sorteringsfelt blir ignorert
         /// </summary>
         /// <param name="searchParameters">Objekt som inneholder søkefelt, søkeverdi, paginering, maks antall records, sorteringsfelt, samt sorteringsrekkefølge </param>
         /// <returns></returns>
@@ -64,28 +61,26 @@ namespace PowerService.DAL.Context
         {
             //TODO: Refactor, build service repository for methods accessing all entity types
             var route = Request.Path.Value;
-            var orderClause = SanitizeSearchParams(searchParameters);
+            
 
             try
             {
-                List<Account> accounts;
-                accounts = await BuildAndExecuteQuery(searchParameters, orderClause);
-                //TEst - trenger jeg orderclauise - kan dette reduseres til en? Hva hvis orderby er lik string.empty?
+                var accounts = await  BuildAndExecuteQuery(searchParameters);
                 var results = await BuildResponseObjects(accounts);
                 var totalRecords = await _context.Accounts.CountAsync();
                 var pagedResponse = CreatePagedResponses(searchParameters, results, totalRecords, route);
                 
-                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, 10001, Request.Path.Value);
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null,"",10001, Request.Path.Value);
                 return Ok(pagedResponse);
             }
             catch (UnauthorizedAccessException uae)
             {
-                HelpFunctions.CreateLogEntry(LogLevel.Warning, _logger, uae, 30001, Request.Path.Value);
+                HelpFunctions.CreateLogEntry(LogLevel.Warning, _logger, uae,"",30001, Request.Path.Value);
                 return Unauthorized();
             }
             catch (Exception ex)
             {
-                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, ex, 59001, Request.Path.Value);
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, ex, "",59001, Request.Path.Value);
                 return BadRequest(ex.Message);
             }
         }
@@ -110,63 +105,10 @@ namespace PowerService.DAL.Context
             return results;
         }
 
-        private async Task<List<Account>> BuildAndExecuteQuery(SearchParameter searchParameters, string orderClause)
-        {
-            List<Account> accounts;
-            if (string.IsNullOrEmpty(searchParameters.SearchField))
-            {
-                var searchText = "";
-                var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
-                var i = 0;
-                foreach (var column in columns)
-                {
-                    searchText += column + ".Contains(\"" + searchParameters.SearchValue + "\")";
-                    i++;
-                    if (columns.Count > i)
-                        searchText += " || ";
-                }
+     
 
-                if (orderClause != string.Empty)
-                    accounts = await _context.Accounts
-                        .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
-                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                        .Take(searchParameters.PageSize).ToListAsync();
-                else
-                    accounts = await _context.Accounts
-                        .Where(searchText, StringComparison.InvariantCultureIgnoreCase)
-                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                        .Take(searchParameters.PageSize).ToListAsync();
-            }
-            else
-            {
-                if (orderClause != string.Empty)
-                    accounts = await _context.Accounts
-                        .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
-                            StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
-                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                        .Take(searchParameters.PageSize).ToListAsync();
-                else
-                    accounts = await _context.Accounts
-                        .Where(searchParameters.SearchField + ".Contains(@0)", searchParameters.SearchValue,
-                            StringComparison.InvariantCultureIgnoreCase)
-                        .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
-                        .Take(searchParameters.PageSize).ToListAsync();
-            }
 
-            return accounts;
-        }
-
-        private static string SanitizeSearchParams(SearchParameter searchParameters)
-        {
-            var orderClause = "";
-            if (searchParameters.SortingField == string.Empty)
-                searchParameters.SortingField = "Name";
-            if (searchParameters.Order.ToLower() == "desc")
-                orderClause = searchParameters.SortingField + " DESC";
-            else
-                orderClause = searchParameters.SortingField + " ASC";
-            return orderClause;
-        }
+        
 
         /// <summary>
         /// Retrieves a single account
@@ -189,11 +131,12 @@ namespace PowerService.DAL.Context
                 {
                     return NotFound();
                 }
-
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, "",10001, Request.Path.Value);
                 return Ok(response.Value);
             }
             catch (Exception ex)
             {
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, null, ex.Message, 59001, Request.Path.Value);
                 return BadRequest(ex.Message);
             }
         }
@@ -221,6 +164,7 @@ namespace PowerService.DAL.Context
             }
             catch(Exception ex)
             {
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, null, patch.ToString(), 59001, Request.Path.Value);
                 return BadRequest(ex.Message);
             }
             patch.ApplyTo(accountRequest.Value, ModelState);
@@ -230,6 +174,7 @@ namespace PowerService.DAL.Context
             _context.Entry(account).State = EntityState.Modified;
           
             await _context.SaveChangesAsync();
+            HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, patch.ToString(), 10002, Request.Path.Value);
             return Ok(accountRequest.Value);
         }
 
@@ -257,11 +202,12 @@ namespace PowerService.DAL.Context
 
                 _context.Accounts.Add(account);
                 await _context.SaveChangesAsync();
-
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, "Created account with ID: " + account.Id, 10003, Request.Path.Value);
                 return CreatedAtAction("POST", new { id = account.Id }, new AccountResponse().GetResponse(account.Id, _context).Result.Value); 
             }
             catch (Exception ex)
             {
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, ex, ex.Message, 59001, Request.Path.Value);
                 return BadRequest(ex.Message);
             }
         }
@@ -275,20 +221,53 @@ namespace PowerService.DAL.Context
         [HttpDelete("{id}")]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Delete))]
-        public async Task<ActionResult<AccountModel>> DeleteAccount(Guid id)
-        {try
+        public async Task<ActionResult<string>> DeleteAccount(Guid id)
+        {
+            try
             {
                 var account = await _context.Accounts.FindAsync(id);
                 if (account == null)
                 {
                     return NotFound();
                 }
+
                 _context.Accounts.Remove(account);
                 await _context.SaveChangesAsync();
-                return Ok(String.Format("Record with Id {0} was deleted", id.ToString()));
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null,
+                    $"Record with Id {id.ToString()} was deleted", 10004, Request.Path.Value);
+                return Ok($"Record with Id {id.ToString()} was deleted");
             }
-            catch (Exception ex) { return BadRequest(ex.Message); }
+            catch (Exception ex)
+            {
+                HelpFunctions.CreateLogEntry(LogLevel.Error, _logger, ex, ex.Message, 59001, Request.Path.Value);
+                return BadRequest(ex.Message);
+            }
         }
-       
+
+        #region Functions
+        private async Task<List<Account>> BuildAndExecuteQuery(SearchParameter searchParameters)
+        {
+            var searchText = "";
+
+            var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
+            var orderClause = MappingFunctions.BuildOrderClause(searchParameters, columns, "Name");
+            var searchFields = searchParameters.SearchField.Split(';').ToList(); //Splitter mulige flere søkefelt til en array
+            if (columns.Contains(searchParameters.SearchField)) //Ellers søker vi på alle synlige kolonner
+            {
+                //Sjekker om searchField er i listen av displayable columns - da setter vi searchtext til den, hvis ikke bygger vi en søkestren av alle synlige kolonne
+                searchText = MappingFunctions.BuildSearchClause(searchParameters, searchFields, searchText);
+            }
+            else
+            {
+                searchText = MappingFunctions.BuildSearchClause(searchParameters, columns, searchText);
+
+            }
+            var accounts = await _context.Accounts
+                .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
+                .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
+                .Take(searchParameters.PageSize).ToListAsync();
+            return accounts;
+        }
+        #endregion
     }
 }

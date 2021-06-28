@@ -94,12 +94,12 @@ namespace PowerService.Util
             return str;
         }
 
-        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, int eventId, string path)
+        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, string additionalMessage, int eventId, string path)
         {
-            CreateLogEntry(logLevel, logger, null, eventId, path);
+            CreateLogEntry(logLevel, logger, null, additionalMessage, eventId, path);
         }
 
-        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, Exception ex, int eventId, string path)
+        internal static void CreateLogEntry(LogLevel logLevel, ILogger logger, Exception ex, string additionalMessage,  int eventId, string path)
         {
             if (!Startup.LoggingEnabled)
                 return;
@@ -109,16 +109,25 @@ namespace PowerService.Util
             switch (eventId)
             {
                 case 10001:
-                    eId= new EventId(10001, "Record(s) retrieved");
+                    eId= new EventId(10001, "Record(s) retrieved " + additionalMessage);
+                    break;
+                case 10002:
+                    eId = new EventId(10002, "Record patched " + additionalMessage);
+                    break;
+                case 10003:
+                    eId = new EventId(10003, "Record created " + additionalMessage);
+                    break;
+                case 10004:
+                    eId = new EventId(10004, "Record deleted " + additionalMessage);
                     break;
                 case 30001:
-                    eId = new EventId(10001, "Record(s) retrieved");
+                    eId = new EventId(30001, "Access Denied" + additionalMessage);
                     break;
                 case 59001:
-                    eId = new EventId(10001, "Record(s) retrieved");
+                    eId = new EventId(590001, "Malformed request object " + additionalMessage);
                     break;
                 default:
-                    eId = new EventId(0, "No EventId given");
+                    eId = new EventId(0, "No EventId given " + additionalMessage);
                     break;
             }
 
