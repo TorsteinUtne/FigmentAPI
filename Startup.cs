@@ -23,13 +23,19 @@ using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Linq;
+using PowerService.Services;
 
 namespace PowerService
 {
     public class Startup
     {
-        private const char NewChar = '_';
+        #region GlobalProperties
+        public static int MaxPageSize { get; set; }
+        public static bool LoggingEnabled { get; set; }
+        #endregion
 
+        private const char NewChar = '_';
+        
         public  Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -40,6 +46,7 @@ namespace PowerService
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            
             #region Auth0
             // Cookie configuration for HTTP to support cookies with SameSite=None
             services.ConfigureSameSiteNoneCookies();
@@ -152,6 +159,15 @@ namespace PowerService
 
             services.AddDbContext<PowerServiceContext>(options =>
                     options.UseSqlServer(Configuration.GetConnectionString("PowerServiceContext")));
+
+            services.AddHttpContextAccessor();
+            services.AddSingleton<IUriService>(o =>
+            {
+                var accessor = o.GetRequiredService<IHttpContextAccessor>();
+                var request = accessor.HttpContext.Request;
+                var uri = string.Concat(request.Scheme, "://", request.Host.ToUriComponent());
+                return new UriService(uri);
+            });
             #region Swagger
             services.AddSwaggerGen(c =>
             {
@@ -185,9 +201,25 @@ namespace PowerService
                 c.SchemaFilter<SwaggerIgnoreFilter>();
             });
             #endregion
+
+            #region Initialize Global Properties
+
+            try
+            {
+                MaxPageSize = Int32.Parse(Configuration["GlobalProperties:MaxPageSize"]);
+                LoggingEnabled = bool.Parse(Configuration["GlobalProperties:LoggingEnabled"]);
+            }
+            catch (Exception e)
+            {
+                //Console.WriteLine(e);
+                throw;
+            }
+          
+
+            #endregion
         }
 
-       
+
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -250,5 +282,6 @@ namespace PowerService
                 .OfType<NewtonsoftJsonPatchInputFormatter>()
                 .First();
         }
+       
     }
     }
