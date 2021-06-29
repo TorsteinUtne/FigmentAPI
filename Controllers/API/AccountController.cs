@@ -15,6 +15,8 @@ using FromBodyAttribute = System.Web.Http.FromBodyAttribute;
 using HttpDeleteAttribute = Microsoft.AspNetCore.Mvc.HttpDeleteAttribute;
 using HttpPostAttribute = Microsoft.AspNetCore.Mvc.HttpPostAttribute;
 using System.Linq.Dynamic.Core;
+using Microsoft.AspNetCore.JsonPatch.Operations;
+using Microsoft.CodeAnalysis.CSharp;
 using Swashbuckle.Swagger.Annotations;
 using PowerService.Data.Models.RequestResponseObjects;
 using PowerService.Data.Models.RequestResponseObjects.Wrappers;
@@ -57,7 +59,7 @@ namespace PowerService.DAL.Context
         [ApiConventionMethod(typeof(DefaultApiConventions),
                     nameof(DefaultApiConventions.Get))]
        //TODO: FIltrer på Owner-feltet
-        public async Task<ActionResult<IEnumerable<Response<List<AccountResponse>>>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
+        public async Task<ActionResult<PagedResponse<List<AccountResponse>>>> GetAccounts([FromQuery] Data.Models.Queries.SearchParameter searchParameters)
         {
             //TODO: Refactor, build service repository for methods accessing all entity types
             var route = Request.Path.Value;
@@ -121,18 +123,27 @@ namespace PowerService.DAL.Context
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Get))]
      
-        public async Task<ActionResult<AccountResponse>> GetAccount(Guid id)
+        public async Task<ActionResult<Response<AccountResponse>>> GetAccount(Guid id)
         {
             try
             {
-                var response = await new AccountResponse().GetResponse(id, _context);
-
-                if (response == null)
+                var retrievedAccount = await new AccountResponse().GetResponse(id, _context);
+                
+                if (retrievedAccount == null)
                 {
                     return NotFound();
                 }
-                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, "",10001, Request.Path.Value);
-                return Ok(response.Value);
+                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, $"Successfully retrieved account with Id {id}", 10001, Request.Path.Value);
+                var response = new Response<AccountResponse>
+                {
+                    Data = retrievedAccount.Value,
+                    Message = $"Successfully retrieved account with Id {id}",
+                    Succeeded =  true,
+                    Errors =  null
+                };
+                   
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -152,7 +163,7 @@ namespace PowerService.DAL.Context
         /// <returns></returns>
         [Authorize]
         [Microsoft.AspNetCore.Mvc.HttpPatch("{id}")]
-       public async Task<IActionResult> PatchAccount([FromUri]Guid id, [FromBody]JsonPatchDocument<AccountRequest>  patch)
+       public async Task<ActionResult<Response<AccountResponse>>> PatchAccount([FromUri]Guid id, [FromBody]JsonPatchDocument<AccountRequest>  patch)
         {
             var account = await _context.Accounts.FindAsync(id);
             if (account == null)
@@ -175,10 +186,13 @@ namespace PowerService.DAL.Context
           
             await _context.SaveChangesAsync();
             HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, patch.ToString(), 10002, Request.Path.Value);
-            return Ok(accountRequest.Value);
+            var response = new AccountResponse().GeneratePatchResponse(patch, updatedAccount, Request.Path.Value, _context);
+            return Ok(response);
         }
 
        
+
+
         /// <summary>
         /// Creates a new account
         /// </summary>
@@ -191,19 +205,32 @@ namespace PowerService.DAL.Context
         [HttpPost]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Post))]
-        public async Task<ActionResult<AccountResponse>> PostAccount([FromBody] AccountRequest accountRequest)
+        public async Task<ActionResult<Response<AccountResponse>>> PostAccount([FromBody] AccountRequest accountRequest)
         {
             try
             {
                 Claim first = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-                string userId = first.Value;
-                var owner = await _context.PortalUsers.FirstOrDefaultAsync(i => i.AuthOId == userId);
-                var account = new Account(accountRequest, owner.Id);
+                if (first != null)
+                {
+                    string userId = first.Value;
+                    var owner = await _context.PortalUsers.FirstOrDefaultAsync(i => i.AuthOId == userId);
+                    var account = new Account(accountRequest, owner.Id);
 
-                _context.Accounts.Add(account);
-                await _context.SaveChangesAsync();
-                HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, "Created account with ID: " + account.Id, 10003, Request.Path.Value);
-                return CreatedAtAction("POST", new { id = account.Id }, new AccountResponse().GetResponse(account.Id, _context).Result.Value); 
+                    _context.Accounts.Add(account);
+                    await _context.SaveChangesAsync();
+                    HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null, "Created account with ID: " + account.Id, 10003, Request.Path.Value);
+                    var response = new Response<AccountResponse>
+                    {
+                        Data = new AccountResponse().GetResponse(account.Id, _context).Result.Value,
+                        Errors =  null,
+                        Message = $"Created account with ID: {account.Id}",
+                        Succeeded = true
+                    };
+                    return Ok(response);
+                   
+                }
+
+                return Unauthorized();
             }
             catch (Exception ex)
             {
@@ -221,7 +248,7 @@ namespace PowerService.DAL.Context
         [HttpDelete("{id}")]
         [ApiConventionMethod(typeof(DefaultApiConventions),
                      nameof(DefaultApiConventions.Delete))]
-        public async Task<ActionResult<string>> DeleteAccount(Guid id)
+        public async Task<ActionResult<Response<string>>> DeleteAccount(Guid id)
         {
             try
             {
@@ -229,13 +256,17 @@ namespace PowerService.DAL.Context
                 if (account == null)
                 {
                     return NotFound();
-                }
+                } 
 
                 _context.Accounts.Remove(account);
                 await _context.SaveChangesAsync();
                 HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null,
                     $"Record with Id {id.ToString()} was deleted", 10004, Request.Path.Value);
-                return Ok($"Record with Id {id.ToString()} was deleted");
+                var response = new Response<string>
+                {
+                    Message = $"Account record was deleted", Data = $"ID: {id.ToString()}", Succeeded = true
+                };
+                return Ok(response);
             }
             catch (Exception ex)
             {
