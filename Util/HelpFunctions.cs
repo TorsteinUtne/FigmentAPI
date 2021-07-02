@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using PowerService.Data.Models;
 using PowerService.Data.Models.Queries;
+using PowerService.Data.Models.RequestResponseObjects.Wrappers;
 
 namespace PowerService.Util
 {
@@ -51,6 +52,16 @@ namespace PowerService.Util
                 var typedValue = Convert.ChangeType(value, prop.PropertyType);
                 prop.SetValue(model, typedValue);
             }
+        }
+
+        internal static RelatedObjects GetRelatedItemForAttachment(Guid? id, PowerServiceContext context)
+        {
+            return new RelatedObjects();
+        }
+
+        internal static string DetermineMimeType(string fileExtension)
+        {
+            return MimeTypes.GetMimeType(fileExtension);
         }
 
         internal static bool CheckIfValueIsEnum(object value, string path)
@@ -156,6 +167,11 @@ namespace PowerService.Util
                     break;
             }
             ;
+        }
+
+        internal static void RemoveRelations(Activity activity, Guid foreignKeyId, string foreignKeyName)
+        {
+            throw new NotImplementedException();
         }
     }
 }

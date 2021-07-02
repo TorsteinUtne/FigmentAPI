@@ -23,6 +23,9 @@ namespace PowerService.Data.Models
         public string DocumentCategory { get; set; }
 
         public DocumentCategoryType DocumentCategoryType { get; set; }
+
+        [ForeignKey("Activity")]
+        public Guid? ActivityId { get; set; }
  
     }
 }

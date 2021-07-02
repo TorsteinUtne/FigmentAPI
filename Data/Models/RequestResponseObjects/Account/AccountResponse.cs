@@ -16,54 +16,33 @@ namespace PowerService.Data.Models.RequestResponseObjects
         public AccountResponse()
         {
         }
-        //    public AccountResponse(Guid id, PowerServiceContext context)
-        //{
-        ////Bygge Responsobjektet, populere det med data fra account i context basert på ID
-        //var account = context.Accounts.Find(id);
-        //Id = id;
-        //AccountType = account.AccountType.ToString();
-        //Name = account.Name;
-        //Description = account.Description;
-        //Owner = MappingFunctions.GetOwnerName(account.OwnerId, context);
-        //OrganizationNumber = account.OrganizationNumber;
-        //PhoneNumber = account.PhoneNumber;
-        //HomePage = account.HomePage;
-        //NACECode = account.NACECode;
-        //Addresses = MappingFunctions.GetAddressesForAccount(id, context);
-        //Activities = MappingFunctions.GetActivitiesForAccount(id, context);
-        //Subscriptions = MappingFunctions.GetSubscriptionsForAccount(id, context);
-        //Cases = MappingFunctions.GetCasesForAccount(id, context);
-        //Contacts = MappingFunctions.GetContactsForAccount(id, context);
-        //Billings = MappingFunctions.GetBillingsForAccount(id, context);
-        //Bookings = MappingFunctions.GetBookingsForAccount(id, context);
-        //Documents = MappingFunctions.GetDocumentsForAccount(id, context);
-        //Purchases = MappingFunctions.GetPurchasesForAccount(id, context);
-
-        //}
+      
         public async Task<ActionResult<AccountResponse>> GetResponse(Guid id, PowerServiceContext context)
         {
             var account = await context.Accounts.FindAsync(id);
             if (account == null)
                 return null;
-            var response = new AccountResponse();
-            response.Id = id;
-            response.AccountType = account.AccountType.ToString();
-            response.Name = account.Name;
-            response.Description = account.Description;
-            response.Owner = MappingFunctions.GetOwnerName(account.OwnerId, context);
-            response.OrganizationNumber = account.OrganizationNumber;
-            response.PhoneNumber = account.PhoneNumber;
-            response.HomePage = account.HomePage;
-            response.NACECode = account.NACECode;
-            response.Addresses = MappingFunctions.GetAddressesForAccount(id, context);
-            response.Activities = MappingFunctions.GetActivitiesForAccount(id, context);
-            response.Subscriptions = MappingFunctions.GetSubscriptionsForAccount(id, context);
-            response.Cases = MappingFunctions.GetCasesForAccount(id, context);
-            response.Contacts = MappingFunctions.GetContactsForAccount(id, context);
-            response.Billings = MappingFunctions.GetBillingsForAccount(id, context);
-            response.Bookings = MappingFunctions.GetBookingsForAccount(id, context);
-            response.Documents = MappingFunctions.GetDocumentsForAccount(id, context);
-            response.Purchases = MappingFunctions.GetPurchasesForAccount(id, context);
+            var response = new AccountResponse
+            {
+                Id = id,
+                AccountType = account.AccountType.ToString(),
+                Name = account.Name,
+                Description = account.Description,
+                Owner = MappingFunctions.GetOwnerName(account.OwnerId, context),
+                OrganizationNumber = account.OrganizationNumber,
+                PhoneNumber = account.PhoneNumber,
+                HomePage = account.HomePage,
+                NACECode = account.NACECode,
+                Addresses = MappingFunctions.GetAddressesForAccount(id, context).Result,
+                Activities = MappingFunctions.GetActivitiesForAccount(id, context),
+                Subscriptions = MappingFunctions.GetSubscriptionsForAccount(id, context),
+                Cases = MappingFunctions.GetCasesForAccount(id, context),
+                Contacts = MappingFunctions.GetContactsForAccount(id, context),
+                Billings = MappingFunctions.GetBillingsForAccount(id, context),
+                Bookings = MappingFunctions.GetBookingsForAccount(id, context),
+                Documents = MappingFunctions.GetDocumentsForAccount(id, context),
+                Purchases = MappingFunctions.GetPurchasesForAccount(id, context)
+            };
 
             return response;
         }

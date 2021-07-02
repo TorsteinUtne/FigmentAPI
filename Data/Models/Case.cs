@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading.Tasks;
+using PowerService.Data.Models.RequestResponseObjects;
 
 namespace PowerService.Data.Models
 {
@@ -32,5 +33,16 @@ namespace PowerService.Data.Models
         public Guid? ModifiedBy { get; private set; }
 
         public Status Status { get; set; }
+
+        public Case(CaseRequest request, Guid ownerId, PowerServiceContext context)
+        {
+
+            Id = request.Id;
+            Name = request.Name;
+            Description = request.Description;
+            OwnerId = ownerId;
+
+
+        }
     }
 }

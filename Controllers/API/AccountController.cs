@@ -24,7 +24,7 @@ using PowerService.Services;
 using Microsoft.Extensions.Logging;
 using PowerService.Data.Models.Queries;
 
-namespace PowerService.DAL.Context
+namespace PowerService.Controllers.API
 {
     //TODO: Kontroller for alle synlige felt på Accountmodel - til bruk i grensesnittet  legg det inn som en egen modelcontroller
 
@@ -33,7 +33,7 @@ namespace PowerService.DAL.Context
     //opprettet, endret, sporing, logging
     //Sjekke om autentiseringen faktisk fungerer
 
-    //TODO: Feil når maks antall records er lavere enn pagesizxe
+  
     [Microsoft.AspNetCore.Mvc.Route("api/[controller]")]
   
     [ApiController]
@@ -68,9 +68,9 @@ namespace PowerService.DAL.Context
             try
             {
                 var accounts = await  BuildAndExecuteQuery(searchParameters);
-                var results = await BuildResponseObjects(accounts);
-                var totalRecords = await _context.Accounts.CountAsync();
-                var pagedResponse = CreatePagedResponses(searchParameters, results, totalRecords, route);
+                var results = await BuildResponseObjects(accounts.Results);
+                 //Denne bør gi tall på antall treff, ikke antall oppføringer totalt. results-objektet er begrenset av skip-take, og vil ikke vise dette.
+                var pagedResponse = CreatePagedResponses(searchParameters, results, accounts.TotalRecords, route);
                 
                 HelpFunctions.CreateLogEntry(LogLevel.Information, _logger, null,"",10001, Request.Path.Value);
                 return Ok(pagedResponse);
@@ -276,28 +276,39 @@ namespace PowerService.DAL.Context
         }
 
         #region Functions
-        private async Task<List<Account>> BuildAndExecuteQuery(SearchParameter searchParameters)
+        private async Task<QueryResults<List<Account>>> BuildAndExecuteQuery(SearchParameter searchParameters)
         {
             var searchText = "";
 
             var columns = MappingFunctions.GetDisplayableColumns<AccountRequest>();
             var orderClause = MappingFunctions.BuildOrderClause(searchParameters, columns, "Name");
-            var searchFields = searchParameters.SearchField.Split(';').ToList(); //Splitter mulige flere søkefelt til en array
+            var searchFields = searchParameters.SearchField.Split(';').ToList();
+            
+            
+            //Splitter mulige flere søkefelt til en array
             if (columns.Contains(searchParameters.SearchField)) //Ellers søker vi på alle synlige kolonner
             {
                 //Sjekker om searchField er i listen av displayable columns - da setter vi searchtext til den, hvis ikke bygger vi en søkestren av alle synlige kolonne
-                searchText = MappingFunctions.BuildSearchClause(searchParameters, searchFields, searchText);
+                searchText = MappingFunctions.BuildSearchClause(searchParameters, searchFields,  _context);
             }
             else
             {
-                searchText = MappingFunctions.BuildSearchClause(searchParameters, columns, searchText);
+                searchText = MappingFunctions.BuildSearchClause(searchParameters, columns,  _context);
 
             }
+
+            var totalRecords = await _context.Accounts
+                .Where(searchText, StringComparison.InvariantCultureIgnoreCase).CountAsync();
             var accounts = await _context.Accounts
                 .Where(searchText, StringComparison.InvariantCultureIgnoreCase).OrderBy(orderClause)
                 .Skip((searchParameters.PageNumber - 1) * searchParameters.PageSize)
                 .Take(searchParameters.PageSize).ToListAsync();
-            return accounts;
+            return new QueryResults<List<Account>>
+            {
+                Results = accounts,
+                TotalRecords = totalRecords
+            };
+
         }
         #endregion
     }
